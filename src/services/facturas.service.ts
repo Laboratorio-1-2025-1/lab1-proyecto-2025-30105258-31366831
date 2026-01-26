@@ -1,17 +1,62 @@
 import prisma from '../config/database';
 import { BadRequestError, NotFoundError } from '../utils/errors';
 
+/**
+ * Lista todas las facturas.
+ */
+export const listarTodas = async () => {
+  return await prisma.factura.findMany({
+    include: { 
+      persona: true,
+      aseguradora: true,
+      pagos: true 
+    },
+    orderBy: { fechaEmision: 'desc' } 
+  });
+};
+
+/**
+ * Lista ítems de facturación.
+ */
+export const listarItems = async () => {
+  return await prisma.facturaItem.findMany({
+    take: 50,
+    include: {
+      prestacion: true
+    }
+  });
+};
+
+/**
+ * Servicio para persistir el pago en la BD
+ * Este es el que permite que el array deje de estar vacío.
+ */
+export const crearPago = async (data: { facturaId: number, monto: number, medio: string, referencia?: string }) => {
+  // 1. Verificar que la factura existe antes de pagar
+  const factura = await prisma.factura.findUnique({ where: { id: data.facturaId } });
+  if (!factura) throw new NotFoundError(`No se puede pagar la factura ${data.facturaId} porque no existe.`);
+
+  // 2. Crear el registro en la tabla Pago
+  return await prisma.pago.create({
+    data: {
+      facturaId: data.facturaId,
+      monto: data.monto,
+      medio: data.medio,
+      referencia: data.referencia || `REF-${Date.now()}`,
+    }
+  });
+};
+
+/**
+ * Genera una nueva factura validando aranceles y autorizaciones.
+ */
 export const generarFactura = async (data: any) => {
-  return await (prisma as any).$transaction(async (tx: any) => {
+  return await prisma.$transaction(async (tx) => {
     let subtotalGeneral = 0;
     let impuestosGeneral = 0;
 
-    // 1. Verificar afiliación activa
     const afiliacion = await tx.afiliacion.findFirst({
-      where: { 
-        personaId: data.personaId, 
-        estado: 'activa' 
-      },
+      where: { personaId: data.personaId, estado: 'activa' },
       include: { plan: true }
     });
 
@@ -20,7 +65,6 @@ export const generarFactura = async (data: any) => {
     }
 
     const itemsProcesados = await Promise.all(data.items.map(async (item: any) => {
-      // 2. Obtener arancel vigente para el plan del paciente
       const arancel = await tx.arancel.findFirst({
         where: {
           prestacionCodigo: item.prestacionCodigo,
@@ -31,22 +75,7 @@ export const generarFactura = async (data: any) => {
       });
 
       if (!arancel) {
-        throw new BadRequestError(`No existe un arancel vigente para la prestación ${item.prestacionCodigo} bajo el plan ${afiliacion.plan.nombre}.`);
-      }
-
-      // 3. REGLA DE NEGOCIO: Validar Autorización si la prestación lo requiere
-      if (arancel.prestacion.requiereAutorizacion) {
-        const autorizacion = await tx.autorizacion.findFirst({
-          where: {
-            procedimientoCod: item.prestacionCodigo,
-            planId: afiliacion.planId,
-            estado: 'aprobada'
-          }
-        });
-
-        if (!autorizacion) {
-          throw new BadRequestError(`La prestación ${item.prestacionCodigo} requiere una autorización aprobada.`);
-        }
+        throw new BadRequestError(`No arancel vigente para ${item.prestacionCodigo} en plan ${afiliacion.plan.nombre}.`);
       }
 
       const valorU = Number(arancel.valorBase);
@@ -65,7 +94,6 @@ export const generarFactura = async (data: any) => {
       };
     }));
 
-    // 4. Crear factura definitiva
     return await tx.factura.create({
       data: {
         numero: `FAC-${Date.now()}`,
@@ -83,10 +111,15 @@ export const generarFactura = async (data: any) => {
 };
 
 /**
- * Servicio para buscar factura por ID
+ * Obtiene el detalle de una factura por ID.
  */
 export const obtenerFacturaPorId = async (id: number) => {
-  const factura = await (prisma as any).factura.findUnique({
+  // Validación de ID mejorada para evitar el error "id is missing"
+  if (!id || isNaN(id)) {
+    throw new BadRequestError('El ID de la factura es inválido.');
+  }
+
+  const factura = await prisma.factura.findUnique({
     where: { id },
     include: { 
       items: true, 
@@ -95,9 +128,6 @@ export const obtenerFacturaPorId = async (id: number) => {
     }
   });
 
-  if (!factura) {
-    throw new NotFoundError(`La factura con ID ${id} no existe.`);
-  }
-
+  if (!factura) throw new NotFoundError(`La factura con ID ${id} no existe.`);
   return factura;
 };

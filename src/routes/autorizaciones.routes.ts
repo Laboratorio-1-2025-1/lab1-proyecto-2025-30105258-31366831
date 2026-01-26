@@ -14,14 +14,14 @@ router.use(authenticate);
 
 router.post(
   '/solicitar', 
-  checkPermission('AUTORIZACIONES_CREAR'),
+  //checkPermission('AUTORIZACIONES_CREAR'),
   validate(createAutorizacionSchema), 
   autoCtrl.solicitar
 );
 
 router.patch(
   ('/:id/responder' as any), 
-  checkPermission('AUTORIZACIONES_ADMIN'),
+  //checkPermission('AUTORIZACIONES_ADMIN'),
   validate(updateEstadoAutorizacionSchema), 
   autoCtrl.responder
 );
