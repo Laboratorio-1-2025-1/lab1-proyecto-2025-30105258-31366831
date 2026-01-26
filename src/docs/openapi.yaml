@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: API Sistema Médico Integral 2026
-  version: 10.1.0
+  version: 11.2.0
   description: |
     Documentación técnica completa. Implementa rutas RESTful con soporte para paginación, filtros y ordenamiento. 
     Cubriendo el ciclo completo: Seguridad, Agenda, Citas, Historia Clínica, Aseguramiento y Finanzas.
@@ -9,8 +9,6 @@ info:
     **Guía de Autorización:**
     1. Obtenga el token en `/api/auth/login`.
     2. Haga clic en **Authorize** y pegue el token (solo la cadena alfanumérica).
-
-    **Nota Técnica:** Se han sincronizado los nombres de las rutas con el archivo `personas.routes.ts` (`/archived` y `/:id/restore`).
 
 servers:
   - url: http://localhost:3000
@@ -63,7 +61,7 @@ components:
         email: { type: string, format: email, example: "perez@clinica.com" }
         password: { type: string, format: password, example: "securePassword123" }
         rol: { type: string, enum: [admin, profesional, recepcion], example: "profesional" }
-        profesionalId: { type: integer, description: "ID opcional si el usuario es un médico" }
+        profesionalId: { type: integer }
 
     # --- PERSONAS ---
     Persona:
@@ -71,24 +69,141 @@ components:
       required: [tipoDocumento, numeroDocumento, nombres, apellidos, sexo]
       properties:
         tipoDocumento: { type: string, enum: [DNI, CEDULA, PASAPORTE], example: "CEDULA" }
-        numeroDocumento: { type: string, example: "10203040" }
-        nombres: { type: string, example: "Carlos" }
-        apellidos: { type: string, example: "Ruiz" }
-        fechaNacimiento: { type: string, format: date }
+        numeroDocumento: { type: string, example: "1020304050" }
+        nombres: { type: string, example: "Carlos Andrés" }
+        apellidos: { type: string, example: "Mendoza Ruiz" }
+        fechaNacimiento: { type: string, format: date, example: "1985-12-10" }
         sexo: { type: string, enum: [MASCULINO, FEMENINO, OTRO], example: "MASCULINO" }
+        correo: { type: string, example: "carlos.mendoza@email.com" }
+        telefono: { type: string, example: "3001234567" }
+        direccion: { type: string, example: "Calle Falsa 123" }
+        contactoEmergencia: { type: string, example: "María Ruiz - 3009876543" }
+        alergias: { type: string, example: "Penicilina" }
         estado: { type: string, enum: [activo, inactivo], default: "activo" }
 
+    # --- PROFESIONALES ---
+    ProfesionalRequest:
+      type: object
+      properties:
+        nombres: { type: string, example: "Gregory" }
+        apellidos: { type: string, example: "House" }
+        registroProfesional: { type: string, example: "MP-98765" }
+        especialidad: { type: string, example: "Diagnóstico / Nefrología" }
+        correo: { type: string, example: "house@clinica.com" }
+        telefono: { type: string, example: "555-0199" }
+        agendaHabilitada: { type: boolean, example: true }
+
+    # --- UNIDADES MÉDICAS ---
+    UnidadMedicaRequest:
+      type: object
+      required: [nombre, tipo]
+      properties:
+        nombre:
+          type: string
+          example: "Sala de Urgencias - Box 05"
+        tipo:
+          type: string
+          example: "URGENCIAS"
+        direccion:
+          type: string
+          example: "Piso 1, Entrada Principal"
+        telefono:
+          type: string
+          example: "555-9000"
+        horarioReferencia:
+          type: string
+          example: "24 Horas"
+
+
     # --- AGENDA Y CITAS ---
+    AgendaRequest:
+      type: object
+      properties:
+        profesionalId: { type: integer, example: 1 }
+        unidadId: { type: integer, example: 1 }
+        inicio: { type: string, format: date-time, example: "2026-02-01T08:00:00Z" }
+        fin: { type: string, format: date-time, example: "2026-02-01T10:00:00Z" }
+        capacidad: { type: integer, example: 5 }
+        estado: { type: string, example: "abierto" }
+
     CitaRequest:
       type: object
-      required: [personaId, profesionalId, fechaHora]
       properties:
         personaId: { type: integer, example: 1 }
-        profesionalId: { type: integer, example: 5 }
-        fechaHora: { type: string, format: date-time, example: "2026-02-15T09:00:00Z" }
-        motivo: { type: string, example: "Control post-operatorio" }
+        profesionalId: { type: integer, example: 1 }
+        unidadId: { type: integer, example: 1 }
+        agendaId: { type: integer, example: 1 }
+        inicio: { type: string, format: date-time, example: "2026-01-10T09:00:00Z" }
+        fin: { type: string, format: date-time, example: "2026-01-10T09:30:00Z" }
+        motivo: { type: string, example: "Consulta de control por hipertensión" }
+        canal: { type: string, example: "PRESENCIAL" }
+        observaciones: { type: string, example: "Paciente requiere toma de tensión al ingresar" }
 
-    # --- CLÍNICA ---
+    # --- HISTORIA CLÍNICA ---
+    EpisodioRequest:
+      type: object
+      required: [personaId, profesionalId, motivo, tipo]
+      properties:
+        personaId:
+          type: integer
+          example: 3
+        profesionalId:
+          type: integer
+          example: 2
+        motivo:
+          type: string
+          example: "Chequeo preventivo"
+        tipo:
+          type: string
+          enum: [CONSULTA_EXTERNA, URGENCIAS, HOSPITALIZACION]
+          example: "CONSULTA_EXTERNA"
+
+    DiagnosticoRequest:
+      type: object
+      properties:
+        episodioId: { type: integer, example: 1 }
+        codigo: { type: string, example: "I10X" }
+        descripcion: { type: string, example: "Hipertensión esencial (primaria)" }
+        tipo: { type: string, enum: [DEFINITIVO, PRESUNTIVO], example: "DEFINITIVO" }
+        principal: { type: boolean, example: true }
+
+    PrescripcionRequest:
+      type: object
+      properties:
+        episodioId: { type: integer, example: 1 }
+        observaciones: { type: string, example: "Tomar con abundante agua después de las comidas." }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              medicamentoCodigo: { type: string, example: "MET-500" }
+              nombre: { type: string, example: "Metformina 500mg" }
+              dosis: { type: string, example: "1 tableta" }
+              via: { type: string, example: "Oral" }
+              frecuencia: { type: string, example: "Cada 12 horas" }
+              duracion: { type: string, example: "30 días" }
+
+    OrdenMedicaRequest:
+      type: object
+      properties:
+        episodioId: { type: integer, example: 2 }
+        tipo: { type: string, example: "LABORATORIO" }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              codigo: { type: string, example: "LAB-001" }
+              descripcion: { type: string, example: "Hemograma Completo" }
+
+    ResultadoRequest:
+      type: object
+      properties:
+        ordenId: { type: integer, example: 1 }
+        resumen: { type: string, example: "Se observan niveles de hemoglobina ligeramente bajos. Se recomienda control en 15 días." }
+        archivoId: { type: string, example: "UUID-FILE-9982.pdf" }
+
     NotaClinicaRequest:
       type: object
       required: [episodioId, contenido]
@@ -97,22 +212,94 @@ components:
         contenido: { type: string, example: "Paciente refiere mejoría tras tratamiento inicial." }
         diagnosticoCIE10: { type: string, example: "I10X" }
 
-    OrdenMedicaRequest:
+    # --- ASEGURAMIENTO ---
+    AseguradoraRequest:
       type: object
-      required: [episodioId, prestacionId]
       properties:
-        episodioId: { type: integer }
-        prestacionId: { type: integer }
-        observaciones: { type: string }
+        nombre: { type: string, example: "Sura EPS" }
+        nit: { type: string, example: "800.123.456-7" }
+        contacto: { type: string, example: "Tel: 601-5550000, Correo: contacto@sura.com" }
+        estado: { type: string, example: "activo" }
+
+    PlanRequest:
+      type: object
+      properties:
+        aseguradoraId: { type: integer, example: 1 }
+        nombre: { type: string, example: "Plan Oro Empresarial" }
+        condicionesGenerales: { type: string, example: "Cubre 100% urgencias, 80% consulta externa, incluye red nacional." }
+        estado: { type: string, example: "activo" }
+
+    AfiliacionRequest:
+      type: object
+      properties:
+        personaId: { type: integer, example: 1 }
+        planId: { type: integer, example: 1 }
+        numeroPoliza: { type: string, example: "POL-2026-9988" }
+        vigenteDesde: { type: string, format: date-time, example: "2026-01-01T00:00:00Z" }
+        vigenteHasta: { type: string, format: date-time, example: "2026-12-31T23:59:59Z" }
+        copago: { type: number, example: 15000.00 }
+        cuotaModeradora: { type: number, example: 3500.50 }
+        estado: { type: string, example: "activa" }
+
+    AutorizacionSolicitud:
+      type: object
+      properties:
+        planId: { type: integer, example: 3 }
+        procedimientoCodigo: { type: string, example: "LAB-001" }
+        observaciones: { type: string, example: "Solicitud válida" }
+
+    AutorizacionRespuesta:
+      type: object
+      required: [estado, numeroAutorizacion]
+      properties:
+        estado: { type: string, enum: [aprobada, negada], example: "aprobada" }
+        numeroAutorizacion: { type: string, example: "AUT-2026-XYZ-88" }
+        observaciones: { type: string, example: "Tratamiento autorizado según convenio vigente." }
+        fechaRespuesta: { type: string, format: date-time, example: "2026-01-25T14:30:00Z" }
 
     # --- FINANZAS ---
+    FacturaSolicitud:
+      type: object
+      properties:
+        personaId: { type: integer, example: 1 }
+        moneda: { type: string, example: "COP" }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              prestacionCodigo: { type: string, example: "LAB001" }
+              cantidad: { type: integer, example: 1 }
+
+    PagoRequest:
+      type: object
+      properties:
+        facturaId: { type: integer, example: 2 }
+        monto: { type: number, example: 30000 }
+        medio: { type: string, example: "efectivo" }
+        referencia: { type: string, example: "PAGO-001" }
+
     NotaContableRequest:
       type: object
-      required: [facturaId, tipo, monto]
       properties:
-        facturaId: { type: integer, example: 100 }
-        tipo: { type: string, enum: [CREDITO, DEBITO], example: "CREDITO" }
-        monto: { type: number, example: 150.50 }
+        facturaId: { type: integer, example: 1 }
+        monto: { type: number, example: 5000 }
+        motivo: { type: string, example: "Cargo por materiales de curación adicionales" }
+        tipo: { type: string, enum: [CREDITO, DEBITO], example: "DEBITO" }
+
+    # --- NOTIFICACIONES ---
+    NotificacionRequest:
+      type: object
+      properties:
+        tipo: { type: string, enum: [EMAIL, SMS, PUSH], example: "EMAIL" }
+        plantilla: { type: string, example: "BIENVENIDA_SISTEMA" }
+        destinatario: { type: string, example: "oscar.test@ejemplo.com" }
+        payload:
+          type: object
+          properties:
+            usuario: { type: string, example: "Oscar" }
+            mensaje: { type: string, example: "Tu cuenta ha sido configurada exitosamente." }
+            fecha: { type: string, example: "2026-01-06" }
 
 paths:
   # --- MÓDULO: SEGURIDAD ---
@@ -125,11 +312,9 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/RegistroSolicitud'
+            schema: { $ref: '#/components/schemas/RegistroSolicitud' }
       responses:
-        201:
-          description: Creado
+        201: { description: Creado }
 
   /api/auth/login:
     post:
@@ -140,13 +325,9 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/LoginSolicitud'
+            schema: { $ref: '#/components/schemas/LoginSolicitud' }
       responses:
-        200:
-          description: OK
-        401:
-          description: Credenciales inválidas
+        200: { description: OK }
 
   /api/auth/refresh:
     post:
@@ -162,8 +343,7 @@ paths:
               properties:
                 refreshToken: { type: string }
       responses:
-        200:
-          description: OK
+        200: { description: OK }
 
   # --- MÓDULO: USUARIOS Y ROLES ---
   /api/usuarios:
@@ -171,24 +351,21 @@ paths:
       tags: [Usuarios]
       summary: Listar usuarios del sistema
       responses:
-        200:
-          description: OK
+        200: { description: OK }
 
   /api/usuarios/roles:
     get:
       tags: [Usuarios]
       summary: Listar roles configurados
       responses:
-        200:
-          description: OK
+        200: { description: OK }
 
   /api/usuarios/permisos:
     get:
       tags: [Usuarios]
       summary: Listar catálogo de permisos
       responses:
-        200:
-          description: OK
+        200: { description: OK }
 
   # --- MÓDULO: PACIENTES ---
   /api/personas:
@@ -201,18 +378,10 @@ paths:
         - $ref: '#/components/parameters/SortOrder'
         - name: q
           in: query
-          schema:
-            type: string
+          schema: { type: string }
           description: Buscar por nombre o número de documento
-        - name: sexo
-          in: query
-          schema:
-            type: string
-            enum: [MASCULINO, FEMENINO, OTRO]
-          description: Filtrar por sexo
       responses:
-        200:
-          description: OK
+        200: { description: OK }
     post:
       tags: [Pacientes]
       summary: Crear nuevo paciente
@@ -220,23 +389,16 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/Persona'
+            schema: { $ref: '#/components/schemas/Persona' }
       responses:
-        201:
-          description: Creado
+        201: { description: Creado }
 
   /api/personas/archived:
     get:
       tags: [Pacientes]
       summary: Listar pacientes archivados (inactivos)
-      description: Recupera pacientes con borrado lógico. Sincronizado con endpoint /archived.
-      parameters:
-        - $ref: '#/components/parameters/PaginationLimit'
-        - $ref: '#/components/parameters/PaginationOffset'
       responses:
-        200:
-          description: OK
+        200: { description: OK }
 
   /api/personas/{id}:
     delete:
@@ -246,28 +408,21 @@ paths:
         - name: id
           in: path
           required: true
-          schema:
-            type: integer
+          schema: { type: integer }
       responses:
-        200:
-          description: Registro marcado como inactivo
+        200: { description: Registro marcado como inactivo }
 
   /api/personas/{id}/restore:
     patch:
       tags: [Pacientes]
       summary: Restaurar paciente (Activar)
-      description: Cambia el estado de un registro inactivo de nuevo a 'activo'.
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: integer
+          schema: { type: integer }
       responses:
-        200:
-          description: Paciente restaurado correctamente
-        404:
-          description: ID de paciente no encontrado
+        200: { description: Paciente restaurado correctamente }
 
   # --- MÓDULO: PROFESIONALES ---
   /api/profesionales:
@@ -275,8 +430,7 @@ paths:
       tags: [Profesionales]
       summary: Listar profesionales de la salud
       responses:
-        200:
-          description: OK
+        200: { description: OK }
     post:
       tags: [Profesionales]
       summary: Registrar nuevo profesional
@@ -284,40 +438,30 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                nombres: { type: string }
-                apellidos: { type: string }
-                especialidad: { type: string }
-                registroMedico: { type: string }
+            schema: { $ref: '#/components/schemas/ProfesionalRequest' }
       responses:
-        201:
-          description: Profesional registrado
+        201: { description: Profesional registrado }
 
   # --- MÓDULO: UNIDADES ---
   /api/unidades:
     get:
       tags: [Unidades]
-      summary: Listar unidades médicas / Consultorios
+      summary: Listar unidades médicas
       responses:
-        200:
-          description: OK
+        200: { description: OK }
     post:
       tags: [Unidades]
       summary: Crear nueva unidad médica
       requestBody:
+        description: Estructura de la unidad médica o consultorio
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                nombre: { type: string }
-                ubicacion: { type: string }
+              $ref: '#/components/schemas/UnidadMedicaRequest'
       responses:
         201:
-          description: Unidad creada
+          description: Unidad creada exitosamente
 
   # --- MÓDULO: AGENDA Y CITAS ---
   /api/agendas:
@@ -325,8 +469,7 @@ paths:
       tags: [Agenda]
       summary: Consultar disponibilidad de profesionales
       responses:
-        200:
-          description: OK
+        200: { description: OK }
     post:
       tags: [Agenda]
       summary: Abrir bloques de disponibilidad
@@ -334,48 +477,21 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                profesionalId: { type: integer }
-                fechaInicio: { type: string, format: date-time }
-                fechaFin: { type: string, format: date-time }
+            schema: { $ref: '#/components/schemas/AgendaRequest' }
       responses:
-        201:
-          description: Bloque creado
+        201: { description: Bloque creado }
     patch:
       tags: [Agenda]
-      summary: Actualizar estado de bloque de agenda
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                id: { type: integer }
-                estado: { type: string, enum: [disponible, bloqueado, reservado] }
+      summary: Actualizar estado de agenda
       responses:
-        200:
-          description: Estado actualizado
+        200: { description: OK }
 
   /api/citas:
     get:
       tags: [Citas]
       summary: Listar citas con filtros
-      parameters:
-        - name: personaId
-          in: query
-          schema: { type: integer }
-        - name: profesionalId
-          in: query
-          schema: { type: integer }
-        - name: estado
-          in: query
-          schema: { type: string, enum: [pendiente, confirmada, cancelada, completada] }
       responses:
-        200:
-          description: OK
+        200: { description: OK }
     post:
       tags: [Citas]
       summary: Agendar nueva cita médica
@@ -383,27 +499,14 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/CitaRequest'
+            schema: { $ref: '#/components/schemas/CitaRequest' }
       responses:
-        201:
-          description: Cita agendada
+        201: { description: Cita agendada }
     patch:
       tags: [Citas]
-      summary: Gestión de citas (Confirmar, cancelar, reprogramar)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                id: { type: integer }
-                accion: { type: string, enum: [confirmar, cancelar, reprogramar] }
-                nuevaFecha: { type: string, format: date-time }
+      summary: Actualizar estado de cita
       responses:
-        200:
-          description: Cita actualizada
+        200: { description: OK }
 
   # --- MÓDULO: HISTORIA CLÍNICA ---
   /api/episodios:
@@ -411,42 +514,22 @@ paths:
       tags: [Historia Clínica]
       summary: Listar episodios de atención
       responses:
-        200:
-          description: OK
+        200: { description: OK }
     post:
       tags: [Historia Clínica]
       summary: Abrir episodio de atención
       requestBody:
+        description: Datos para la apertura de un nuevo episodio médico
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [personaId, profesionalId, motivo, tipo]
-              properties:
-                personaId: { type: integer, example: 1 }
-                profesionalId: { type: integer, example: 10 }
-                motivo: { type: string, example: "Dolor abdominal agudo y náuseas" }
-                tipo:
-                  type: string
-                  enum: [CONSULTA_EXTERNA, URGENCIAS, HOSPITALIZACION]
-                  example: "CONSULTA_EXTERNA"
+              $ref: '#/components/schemas/EpisodioRequest'
       responses:
         201:
-          description: Episodio abierto
-
-  /api/episodios/{id}:
-    get:
-      tags: [Historia Clínica]
-      summary: Obtener detalle de un episodio
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        200:
-          description: OK
+          description: Episodio abierto exitosamente
+        400:
+          description: Datos de solicitud inválidos
 
   /api/episodios/{id}/cerrar:
     patch:
@@ -458,70 +541,72 @@ paths:
           required: true
           schema: { type: integer }
       responses:
-        200:
-          description: Episodio cerrado
+        200: { description: Episodio cerrado }
 
   /api/notas:
+    get:
+      tags: [Historia Clínica]
+      summary: Consultar todas las notas clínicas
+      responses:
+        200: { description: OK }
     post:
       tags: [Historia Clínica]
-      summary: Registrar evolución médica (SOAP) / Adenda
+      summary: Registrar evolución médica
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/NotaClinicaRequest'
+            schema: { $ref: '#/components/schemas/NotaClinicaRequest' }
       responses:
-        201:
-          description: Nota guardada
-
+        201: { description: Nota guardada }
+  
   /api/notas/{id}:
     get:
       tags: [Historia Clínica]
-      summary: Obtener detalle de una nota clínica
+      summary: Obtener nota clínica por ID
       parameters:
         - name: id
           in: path
           required: true
           schema: { type: integer }
       responses:
-        200:
-          description: OK
+        200: { description: OK }
 
   /api/notas/episodio/{episodioId}:
     get:
       tags: [Historia Clínica]
-      summary: Listar todas las notas de un episodio
+      summary: Obtener notas por ID de episodio
       parameters:
         - name: episodioId
           in: path
           required: true
           schema: { type: integer }
       responses:
-        200:
-          description: OK
+        200: { description: OK }
 
   /api/ordenes:
     get:
       tags: [Historia Clínica]
       summary: Listar órdenes médicas
       responses:
-        200:
-          description: OK
+        200: { description: OK }
     post:
       tags: [Historia Clínica]
-      summary: Generar orden médica (Exámenes/Procedimientos)
+      summary: Generar orden médica
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/OrdenMedicaRequest'
+            schema: { $ref: '#/components/schemas/OrdenMedicaRequest' }
       responses:
-        201:
-          description: Orden generada
+        201: { description: Orden generada }
 
   /api/diagnosticos:
+    get:
+      tags: [Historia Clínica]
+      summary: Listar diagnósticos
+      responses:
+        200: { description: OK }
     post:
       tags: [Historia Clínica]
       summary: Registrar diagnóstico
@@ -529,114 +614,113 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                episodioId: { type: integer }
-                codigoCIE10: { type: string }
-                descripcion: { type: string }
+            schema: { $ref: '#/components/schemas/DiagnosticoRequest' }
       responses:
-        201:
-          description: Diagnóstico registrado
+        201: { description: Diagnóstico registrado }
 
-  /api/consentimientos:
+  /api/resultados:
+    get:
+      tags: [Historia Clínica]
+      summary: Consultar resultados de órdenes
+      responses:
+        200: { description: OK }
     post:
       tags: [Historia Clínica]
-      summary: Registrar consentimiento informado
+      summary: Registrar resultado de examen
       requestBody:
-        required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                personaId: { type: integer }
-                tipoProcedimiento: { type: string }
-                firmado: { type: boolean }
+            schema: { $ref: '#/components/schemas/ResultadoRequest' }
       responses:
-        201:
-          description: Consentimiento registrado
+        201: { description: Resultado guardado }
 
   /api/prescripciones:
     post:
       tags: [Historia Clínica]
-      summary: Crear prescripción médica / Receta
+      summary: Crear prescripción médica
       requestBody:
-        required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                episodioId: { type: integer }
-                medicamento: { type: string }
-                posologia: { type: string }
+            schema: { $ref: '#/components/schemas/PrescripcionRequest' }
       responses:
-        201:
-          description: Prescripción creada
-
+        201: { description: Prescripción creada }
+  
   /api/prescripciones/episodio/{episodioId}:
     get:
       tags: [Historia Clínica]
-      summary: Listar prescripciones de un episodio
+      summary: Listar prescripciones por episodio
       parameters:
         - name: episodioId
           in: path
           required: true
           schema: { type: integer }
       responses:
-        200:
-          description: OK
+        200: { description: OK }
 
   # --- MÓDULO: ASEGURAMIENTO ---
   /api/aseguradoras:
     get:
       tags: [Aseguramiento]
-      summary: Listar EPS / Aseguradoras
+      summary: Listar Aseguradoras
       responses:
-        200:
-          description: OK
+        200: { description: OK }
+    post:
+      tags: [Aseguramiento]
+      summary: Crear Aseguradora
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AseguradoraRequest' }
+      responses:
+        201: { description: Creado }
 
   /api/planes:
+    get:
+      tags: [Aseguramiento]
+      summary: Listar planes de salud
+      responses:
+        200: { description: OK }
     post:
       tags: [Aseguramiento]
       summary: Crear nuevo plan de salud
       requestBody:
-        required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                aseguradoraId: { type: integer }
-                nombrePlan: { type: string }
-                cobertura: { type: string }
+            schema: { $ref: '#/components/schemas/PlanRequest' }
       responses:
-        201:
-          description: Plan creado
+        201: { description: Plan creado }
 
   /api/afiliaciones:
+    get:
+      tags: [Aseguramiento]
+      summary: Listar afiliaciones de pacientes
+      responses:
+        200: { description: OK }
     post:
       tags: [Aseguramiento]
-      summary: Registrar afiliación de paciente a plan
+      summary: Registrar afiliación
       requestBody:
-        required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                personaId: { type: integer }
-                planId: { type: integer }
-                fechaInicio: { type: string, format: date }
+            schema: { $ref: '#/components/schemas/AfiliacionRequest' }
       responses:
-        201:
-          description: Afiliación registrada
+        201: { description: Afiliación registrada }
 
+  /api/autorizaciones/solicitar:
+    post:
+      tags: [Aseguramiento]
+      summary: Solicitar autorización médica
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AutorizacionSolicitud' }
+      responses:
+        201: { description: Solicitud enviada }
+  
   /api/autorizaciones/{id}/responder:
     patch:
       tags: [Aseguramiento]
-      summary: Responder a solicitud de autorización
+      summary: Responder a una solicitud de autorización
       parameters:
         - name: id
           in: path
@@ -646,43 +730,27 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [decision]
-              properties:
-                decision: { type: string, enum: [APROBADA, NEGADA] }
-                numeroAutorizacion: { type: string }
-                motivo: { type: string }
+            schema: { $ref: '#/components/schemas/AutorizacionRespuesta' }
       responses:
-        200:
-          description: Procesado
+        200: { description: Respuesta registrada }
 
   # --- MÓDULO: FINANZAS ---
   /api/facturas:
     get:
       tags: [Finanzas]
       summary: Consultar historial de facturación
-      parameters:
-        - $ref: '#/components/parameters/PaginationLimit'
       responses:
-        200:
-          description: OK
+        200: { description: OK }
     post:
       tags: [Finanzas]
       summary: Generar liquidación de servicios
       requestBody:
-        required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [episodioId]
-              properties:
-                episodioId: { type: integer }
+            schema: { $ref: '#/components/schemas/FacturaSolicitud' }
       responses:
-        201:
-          description: Factura generada
-
+        201: { description: Factura generada }
+  
   /api/facturas/{id}:
     get:
       tags: [Finanzas]
@@ -693,48 +761,36 @@ paths:
           required: true
           schema: { type: integer }
       responses:
-        200:
-          description: OK
-
+        200: { description: OK }
+  
   /api/facturas/items:
     get:
       tags: [Finanzas]
-      summary: Listar ítems facturables por detalle
+      summary: Consultar ítems de facturación individuales
       responses:
-        200:
-          description: OK
+        200: { description: OK }
 
   /api/facturas/pagos:
     post:
       tags: [Finanzas]
       summary: Registrar pago de factura
       requestBody:
-        required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                facturaId: { type: integer }
-                monto: { type: number }
-                metodoPago: { type: string }
+            schema: { $ref: '#/components/schemas/PagoRequest' }
       responses:
-        201:
-          description: Pago registrado
+        201: { description: Pago registrado }
 
   /api/notas-contables:
     post:
       tags: [Finanzas]
       summary: Aplicar Nota de Crédito/Débito
       requestBody:
-        required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/NotaContableRequest'
+            schema: { $ref: '#/components/schemas/NotaContableRequest' }
       responses:
-        201:
-          description: Ajuste aplicado
+        201: { description: Ajuste aplicado }
 
   # --- CATÁLOGOS ---
   /api/prestaciones:
@@ -742,8 +798,7 @@ paths:
       tags: [Catálogo]
       summary: Consultar catálogo de servicios (CUPS)
       responses:
-        200:
-          description: OK
+        200: { description: OK }
     post:
       tags: [Catálogo]
       summary: Crear nueva prestación en catálogo
@@ -754,9 +809,11 @@ paths:
             schema:
               type: object
               properties:
-                codigo: { type: string }
-                nombre: { type: string }
+                codigo: { type: string, example: "LAB001" }
+                nombre: { type: string, example: "Hemograma Completo" }
+                grupo: { type: string, example: "Laboratorio" }
                 requiereAutorizacion: { type: boolean }
+                estados: { type: string, enum: [activo, inactivo], default: "activo" }
       responses:
         201:
           description: Prestación creada
@@ -766,11 +823,10 @@ paths:
       tags: [Catálogo]
       summary: Consultar tarifas y precios vigentes
       responses:
-        200:
-          description: OK
+        200: { description: OK }
     post:
       tags: [Catálogo]
-      summary: Registrar nueva tarifa / arancel
+      summary: Crear nueva prestación en catálogo
       requestBody:
         required: true
         content:
@@ -778,36 +834,30 @@ paths:
             schema:
               type: object
               properties:
-                prestacionId: { type: integer }
-                valor: { type: number }
-                moneda: { type: string, default: "USD" }
+                codigo: { type: string, example: "LAB001" }
+                nombre: { type: string, example: "Hemograma Completo" }
+                grupo: { type: string, example: "Laboratorio" }
+                requiereAutorizacion: { type: boolean }
+                estados: { type: string, enum: [activo, inactivo], default: "activo" }
       responses:
         201:
-          description: Arancel registrado
+          description: Prestación creada
 
   # --- NOTIFICACIONES ---
   /api/notificaciones:
     post:
       tags: [Notificaciones]
-      summary: Enviar notificación manual
+      summary: Enviar notificación
       requestBody:
-        required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                personaId: { type: integer }
-                mensaje: { type: string }
-                canal: { type: string, enum: [email, sms, push] }
+            schema: { $ref: '#/components/schemas/NotificacionRequest' }
       responses:
-        201:
-          description: Notificación enviada
-
+        201: { description: Notificación enviada }
+  
   /api/notificaciones/historial:
     get:
       tags: [Notificaciones]
-      summary: Consultar historial de notificaciones enviadas
+      summary: Consultar historial de notificaciones
       responses:
-        200:
-          description: OK
+        200: { description: OK }
